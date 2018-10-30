@@ -17,7 +17,7 @@ using Stratis.Bitcoin.Features.RPC.Controllers;
 
 namespace Stratis.Bitcoin.Features.PeerFlooding
 {
-    public class ChainDiagnosticsFeature : FullNodeFeature
+    public class PeerFloodingFeature : FullNodeFeature
     {
         private readonly FullNode fullNode;
 
@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.PeerFlooding
 
         private readonly IFullNodeBuilder fullNodeBuilder;
 
-        public ChainDiagnosticsFeature(IFullNodeBuilder fullNodeBuilder, FullNode fullNode, NodeSettings nodeSettings, ILoggerFactory loggerFactory)
+        public PeerFloodingFeature(IFullNodeBuilder fullNodeBuilder, FullNode fullNode, NodeSettings nodeSettings, ILoggerFactory loggerFactory)
         {
             this.fullNodeBuilder = fullNodeBuilder;
             this.fullNode = fullNode;
@@ -36,30 +36,24 @@ namespace Stratis.Bitcoin.Features.PeerFlooding
         }
 
         public override Task InitializeAsync()
-        {           
+        {
             return Task.CompletedTask;
         }
+
+
     }
 
-    /// <summary>
-    /// A class providing extension methods for <see cref="IFullNodeBuilder"/>.
-    /// </summary>
-    public static class FullNodeBuilderChainDiagnosticsExtension
+    public static class FullNodeBuilderBlockStoreExtension
     {
-        public static IFullNodeBuilder UseChainDiagnostics(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UsePeerFlooding(this IFullNodeBuilder fullNodeBuilder)
         {
-            LoggingConfiguration.RegisterFeatureNamespace<ChainDiagnosticsFeature>("ChainDiagnostics");
+            LoggingConfiguration.RegisterFeatureNamespace<PeerFloodingFeature>("PeerFlooding");
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
                 features
-                    .AddFeature<ChainDiagnosticsFeature>()
-                    .FeatureServices(services => services.AddSingleton(fullNodeBuilder));
-            });
-
-            fullNodeBuilder.ConfigureServices(service =>
-            {
-                service.AddSingleton<PeerFloodingController>();
+                    .AddFeature<PeerFloodingFeature>()
+                    .FeatureServices(services => { services.AddSingleton<PeerFloodingController>(); });
             });
 
             return fullNodeBuilder;

@@ -1,8 +1,11 @@
 ﻿
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Flurl.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -17,6 +20,7 @@ using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.Miner.Staking;
 using Stratis.Bitcoin.Features.PeerFlooding.Models;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Utilities;
@@ -25,109 +29,71 @@ using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.PeerFlooding.Controllers
 {
-    /// <summary>
-    /// Controller providing API operations on the ChainDiagnostics feature.
-    /// </summary>
     [Route("api/[controller]")]
     public class PeerFloodingController : Controller
     {
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
+        private readonly string walletName;
+        private readonly string password;
+        private readonly int totalruns;
 
-        /// <summary>An interface implementation used to retrieve a transaction.</summary>
-        private readonly IPooledTransaction pooledTransaction;
-
-        /// <summary>An interface implementation used to retrieve unspent transactions from a pooled source.</summary>
-        private readonly IPooledGetUnspentTransaction pooledGetUnspentTransaction;
-
-        /// <summary>An interface implementation used to retrieve unspent transactions.</summary>
-        private readonly IGetUnspentTransaction getUnspentTransaction;
-
-        /// <summary>An interface implementation used to retrieve the network difficulty target.</summary>
-        private readonly INetworkDifficulty networkDifficulty;
-
-        /// <summary>An interface implementation for the blockstore.</summary>
-        private readonly IBlockStore blockStore;
-
-        /// <summary>POS staker.</summary>
-        private readonly IPosMinting posMinting;
-
-        private readonly NodeSettings nodeSettings;
-
-        private readonly IDateTimeProvider dateTimeProvider;
-
-        private readonly ConcurrentChain chain;
-        private readonly IBlockProvider blockProvider;
-        private readonly INodeLifetime nodeLifetime;
-
-        public PeerFloodingController(
-            ILoggerFactory loggerFactory,
-            IPooledTransaction pooledTransaction,
-            IPooledGetUnspentTransaction pooledGetUnspentTransaction,
-            IGetUnspentTransaction getUnspentTransaction,
-            INetworkDifficulty networkDifficulty,
-            IFullNode fullNode,
-            NodeSettings nodeSettings,
-            Network network,
-            ConcurrentChain chain,
-            IChainState chainState,
-            Connection.IConnectionManager connectionManager,
-            IConsensusManager consensusManager,
-            IBlockStore blockStore,
-            IPosMinting posMinting,
-            IDateTimeProvider dateTimeProvider,
-            IBlockProvider blockProvider,
-            INodeLifetime nodeLifetime)
+        public PeerFloodingController(ILoggerFactory loggerFactory, 
+                                    string walletName = "thefazzwallet", 
+                                    string password = "123456",
+                                    int totalruns = 10000)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.pooledTransaction = pooledTransaction;
-            this.pooledGetUnspentTransaction = pooledGetUnspentTransaction;
-            this.getUnspentTransaction = getUnspentTransaction;
-            this.networkDifficulty = networkDifficulty;
-            this.nodeSettings = nodeSettings;
-            this.chain = chain;
-            this.blockStore = blockStore;
-            this.posMinting = posMinting;
-            this.dateTimeProvider = dateTimeProvider;
-            this.blockProvider = blockProvider;
-            this.nodeLifetime = nodeLifetime;
+            this.walletName = walletName;
+            this.password = password;
+            this.totalruns = totalruns;
         }
 
-        /// <summary>
-        /// Stops the full node.
-        /// </summary>
         [Route("FloodPeersWithLowFeeTransactions")]
         [HttpPost]
         public async Task FloodPeersWithLowFeeTransactions([FromBody]RequestModels.PeerFloodingRequest request)
         {
-            ChainedHeader chainTip = this.chain.Tip;
-            CancellationTokenSource stakeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(new[] { this.nodeLifetime.ApplicationStopping });
+            Random rand = new Random();
+            string url = $"http://localhost:38221/api/wallet/addresses?walletname={this.walletName}&accountname=account 0";
+            string[] addresses = url.GetJsonAsync<AddressesModel>().GetAwaiter().GetResult().Addresses.Select(add => add.Address).ToArray();
 
-            //uint coinstakeTimestamp = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() & ~PosTimeMaskRule.StakeTimestampMask;
-
-            WalletSecret walletSecret = new WalletSecret
+            int totalRuns = this.totalruns;
+            for (int i = 0; i < totalRuns; i++)
             {
-                WalletName = request.WalletName,
-                WalletPassword = request.WalletPassword
-            };
+                var destinationAddress = addresses[rand.Next(addresses.Count())];
+                this.logger.Log(LogLevel.Debug, $"{i}/{totalRuns} => destinationAddress");
 
-            MethodInfo getUtxoStakeDescriptionsAsyncMethod = typeof(PosMinting).GetMethod("GetUtxoStakeDescriptionsAsync", BindingFlags.NonPublic | BindingFlags.Instance);
-            List<UtxoStakeDescription> utxoStakeDescriptions = await (Task<List<UtxoStakeDescription>>)getUtxoStakeDescriptionsAsyncMethod.Invoke(this, new object[] { walletSecret, stakeCancellationTokenSource });
+                BuildTransactionRequest buildTransactionRequest = new BuildTransactionRequest
+                {
+                    WalletName = "myRecoveredWallet",
+                    AccountName = "account 0",
+                    AllowUnconfirmed = true,
+                    Amount = "1",
+                    FeeAmount = "",
+                    FeeType = "low",
+                    Password = this.password,
+                    DestinationAddress = destinationAddress
+                };
+                try
+                {
+                    dynamic newTransaction = await "http://localhost:38221/api/wallet/build-transaction"
+                        .PostJsonAsync(buildTransactionRequest)
+                        .ReceiveJson();
+                
+                Console.WriteLine(newTransaction);
 
-            BlockTemplate blockTemplate = this.blockProvider.BuildPosBlock(chainTip, new Script());
-            var posBlock = (PosBlock)blockTemplate.Block;
+                var response = await "http://localhost:38221/api/wallet/send-transaction"
+                        .PostJsonAsync(new SendTransactionRequest(newTransaction.hex));
 
-            var coinstakeContext = new CoinstakeContext();
-            coinstakeContext.CoinstakeTx = this.nodeSettings.Network.CreateTransaction();
-            //coinstakeContext.CoinstakeTx.Time = coinstakeTimestamp;
-
-            // Search to current coinstake time.
-            long searchTime = coinstakeContext.CoinstakeTx.Time;
-
-            var lastCoinStakeSearchTime = this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
-            long searchInterval = searchTime - lastCoinStakeSearchTime;
-
-            await this.posMinting.CreateCoinstakeAsync(utxoStakeDescriptions, posBlock, chainTip, searchInterval, blockTemplate.TotalFee, coinstakeContext);
+                    //Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("code 400"))
+                    {
+                        Thread.Sleep(600);
+                    }
+                }
+            }
         }
     }
 }

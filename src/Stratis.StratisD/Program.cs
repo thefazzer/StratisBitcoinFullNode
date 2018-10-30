@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
+using Stratis.Bitcoin.Features.PeerFlooding;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
@@ -34,6 +35,7 @@ namespace Stratis.StratisD
                     .AddPowPosMining()
                     .UseApi()
                     .UseApps()
+                    .UsePeerFlooding()
                     .AddRPC()
                     .Build();
 

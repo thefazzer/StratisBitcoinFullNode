@@ -21,14 +21,10 @@ namespace Stratis.Bitcoin.Features.PeerFlooding.Models
             }
         }
 
-        /// <summary>
-        /// Object used to create a new wallet
-        /// </summary>
         public class PeerFloodingRequest : RequestModel
         {
-            public string WalletName { get; set; }
-            public string WalletPassword { get; set; }
+            //public string  { get; set; }
+            //public string  { get; set; }
         }
-
     }
 }

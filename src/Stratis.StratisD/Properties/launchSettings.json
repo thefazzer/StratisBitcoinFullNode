@@ -5,7 +5,7 @@
     },
     "Stratis.StratisD Test": {
       "commandName": "Project",
-      "commandLineArgs": "-testnet"
+      "commandLineArgs": "-testnet -debug=1"
     },
     "Stratis.StratisD Test with RPC": {
       "commandName": "Project",
