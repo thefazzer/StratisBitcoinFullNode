@@ -28,9 +28,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         /// <summary>
         /// Maximum number of inventory items to send per transmission.
-        /// Limits the impact of low-fee transaction floods.
+        /// This setting encourages low-fee transaction floods.
         /// </summary>
-        private const int InventoryBroadcastMax = 7 * InventoryBroadcastInterval;
+        private const int InventoryBroadcastMax = int.MaxValue;
 
         /// <summary>Memory pool validator for validating transactions.</summary>
         private readonly IMempoolValidator validator;
