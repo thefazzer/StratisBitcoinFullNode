@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Build.Framework;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Stratis.Bitcoin.Features.MemoryPool;
-using Stratis.Bitcoin.Features.Wallet.Controllers;
-using Stratis.Bitcoin.Features.Wallet.Validations;
-using Stratis.Bitcoin.Utilities.ValidationAttributes;
+﻿using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.PeerFlooding.Models
 {
