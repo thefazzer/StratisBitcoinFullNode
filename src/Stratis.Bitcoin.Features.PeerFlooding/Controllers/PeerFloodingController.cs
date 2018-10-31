@@ -37,14 +37,9 @@ namespace Stratis.Bitcoin.Features.PeerFlooding.Controllers
         private readonly string password;
         private readonly int totalruns;
 
-        public PeerFloodingController(ILoggerFactory loggerFactory, 
-                                    string walletName = "thefazzwallet", 
-                                    string password = "123456",
-                                    int totalruns = 10000)
+        public PeerFloodingController(ILoggerFactory loggerFactory, int totalruns = 10000)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.walletName = walletName;
-            this.password = password;
             this.totalruns = totalruns;
         }
 
@@ -52,8 +47,11 @@ namespace Stratis.Bitcoin.Features.PeerFlooding.Controllers
         [HttpPost]
         public async Task FloodPeersWithLowFeeTransactions([FromBody]RequestModels.PeerFloodingRequest request)
         {
+            string walletName = request.WalletName;
+            string password = request.WalletPassword;
+
             Random rand = new Random();
-            string url = $"http://localhost:38221/api/wallet/addresses?walletname={this.walletName}&accountname=account 0";
+            string url = $"http://localhost:38221/api/wallet/addresses?walletname={walletName}&accountname=account 0";
             string[] addresses = url.GetJsonAsync<AddressesModel>().GetAwaiter().GetResult().Addresses.Select(add => add.Address).ToArray();
 
             int totalRuns = this.totalruns;
@@ -64,13 +62,12 @@ namespace Stratis.Bitcoin.Features.PeerFlooding.Controllers
 
                 BuildTransactionRequest buildTransactionRequest = new BuildTransactionRequest
                 {
-                    WalletName = "myRecoveredWallet",
+                    WalletName = "walletNamefdskgjfdhgkjfdshgsd",
                     AccountName = "account 0",
                     AllowUnconfirmed = true,
                     Amount = "1",
                     FeeAmount = "",
-                    FeeType = "low",
-                    Password = this.password,
+                    Password = password,
                     DestinationAddress = destinationAddress
                 };
                 try

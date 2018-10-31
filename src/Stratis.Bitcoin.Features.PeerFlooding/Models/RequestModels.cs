@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Build.Framework;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Validations;
 using Stratis.Bitcoin.Utilities.ValidationAttributes;
@@ -23,8 +24,11 @@ namespace Stratis.Bitcoin.Features.PeerFlooding.Models
 
         public class PeerFloodingRequest : RequestModel
         {
-            //public string  { get; set; }
-            //public string  { get; set; }
+            [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Wallet name is required.")]
+            public string WalletName { get; set; }
+
+            [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Wallet password is required.")]
+            public string WalletPassword { get; set; }
         }
     }
 }
